@@ -10,8 +10,8 @@ import { initializeData } from "./pokie/data";
 import {
   customGameSession as session,
   customGameSessionSerializer as serializer,
-  customScenarios as scenarios,
 } from "@/pokie";
+import { customScenarios as scenarios } from "./pokie/custom-scenarios";
 
 extend({ Sprite, Container, Graphics, Text });
 
