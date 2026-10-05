@@ -8,6 +8,7 @@ import { useEffect, useState, useRef } from "react";
 import frame from "@/assets/game/frame.png";
 import GameControls from "./GameControls";
 import WinningLinesOverlay from "./WinningLinesOverlay";
+import FreeGamesOverlay from "./FreeGamesOverlay";
 import { FRAME_CONFIG } from "@/config";
 
 const ReelsFrame = (props: React.PropsWithChildren) => {
@@ -113,6 +114,7 @@ const ReelsFrame = (props: React.PropsWithChildren) => {
         height={FRAME_CONFIG.HEIGHT}
       />
       <GameControls />
+      <FreeGamesOverlay />
     </pixiContainer>
   );
 };

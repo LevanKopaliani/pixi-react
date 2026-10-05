@@ -1,4 +1,4 @@
-import { availableBets } from "@/config";
+import { availableBets, FREE_GAMES_CONFIG } from "@/config";
 import {
   type LinesPatternsDescribing,
   type SymbolsSequenceDescribing,
@@ -35,6 +35,17 @@ export class SlotConfig extends VideoSlotWithFreeGamesConfig {
     ]);
     this.setWildSymbols(["dance"]);
     this.setScatterSymbols(["freespins1", "freespins2"]);
+
+    /*
+     * Free spins awarded for landing N scatter symbols (anywhere on the reels).
+     * By default pokie only knows about the "S" scatter, so every scatter used in this game has to be registered.
+     */
+    this.getScatterSymbols().forEach((scatter) => {
+      Object.entries(FREE_GAMES_CONFIG.SPINS_FOR_SCATTERS).forEach(
+        ([count, spins]) =>
+          this.setFreeGamesForScatters(scatter, Number(count), spins),
+      );
+    });
 
     const pt = new Paytable(
       this.getAvailableBets(),

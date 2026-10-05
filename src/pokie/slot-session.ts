@@ -19,13 +19,19 @@ export class SlotSession extends VideoSlotWithFreeGamesSession {
 
   public play() {
     super.play();
-    if (
+    SlotSession.config.setFreeGamesMode(this.isNextRoundFreeGame());
+  }
+
+  /** True when free spins have been awarded and not all of them are played yet. */
+  public isNextRoundFreeGame(): boolean {
+    return (
       this.getFreeGamesSum() > 0 &&
-      this.getFreeGamesNum() !== this.getFreeGamesSum()
-    ) {
-      SlotSession.config.setFreeGamesMode(true);
-    } else {
-      SlotSession.config.setFreeGamesMode(false);
-    }
+      this.getFreeGamesNum() < this.getFreeGamesSum()
+    );
+  }
+
+  /** Free spins must be playable even if the balance is below the bet. */
+  public canPlayNextGame(): boolean {
+    return this.isNextRoundFreeGame() || super.canPlayNextGame();
   }
 }

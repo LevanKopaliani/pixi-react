@@ -29,6 +29,8 @@ const GameControls = ({
   const balance = propBalance !== undefined ? propBalance : slot.balance;
   const win = propWin !== undefined ? propWin : slot.win;
   const activeSpinning = isSpinning || slot.isSpinning;
+  // Player input is locked while the free spins feature (or its popups) is running
+  const featureLocked = slot.freeGames.active || slot.featureMessage !== null;
 
   const currentBetIndex = useMemo(() => {
     const idx = availableBets.indexOf(currentBet);
@@ -82,7 +84,7 @@ const GameControls = ({
   };
 
   const handleSpinClick = () => {
-    if (activeSpinning) return;
+    if (activeSpinning || featureLocked) return;
     if (!gameSession.canPlayNextGame()) {
       console.warn("Insufficient balance in gameSession to play");
       return;
@@ -90,14 +92,15 @@ const GameControls = ({
     if (onSpin) {
       onSpin();
     } else {
-      slot.spin();
+      slot.spin(true);
     }
   };
 
   // Determine textures based on state
-  const isLeftDisabled = activeSpinning || currentBetIndex <= 0;
+  const betLocked = activeSpinning || featureLocked;
+  const isLeftDisabled = betLocked || currentBetIndex <= 0;
   const isRightDisabled =
-    activeSpinning || currentBetIndex >= availableBets.length - 1;
+    betLocked || currentBetIndex >= availableBets.length - 1;
 
   const arrowLTexture = isLeftDisabled
     ? textures["Arrow_L_Disabled.png"]
@@ -122,13 +125,15 @@ const GameControls = ({
         ? textures["Info_Hover.png"]
         : textures["Info_Idle.png"];
 
-  const spinTexture = activeSpinning
-    ? textures["Stop_Idle.png"]
-    : pressedButton === "spin"
-      ? textures["Spin_Pressed.png"]
-      : hoveredButton === "spin"
-        ? textures["Spin_Hover.png"]
-        : textures["Spin_Idle.png"];
+  const spinTexture = featureLocked
+    ? textures["Spin_Disabled.png"]
+    : activeSpinning
+      ? textures["Stop_Idle.png"]
+      : pressedButton === "spin"
+        ? textures["Spin_Pressed.png"]
+        : hoveredButton === "spin"
+          ? textures["Spin_Hover.png"]
+          : textures["Spin_Idle.png"];
 
   const textStyle = {
     fontFamily:
@@ -297,8 +302,8 @@ const GameControls = ({
         anchor={0.5}
         width={115}
         height={115}
-        eventMode="static"
-        cursor="pointer"
+        eventMode={featureLocked ? "none" : "static"}
+        cursor={featureLocked ? "default" : "pointer"}
         onPointerEnter={() => setHoveredButton("spin")}
         onPointerLeave={() => {
           setHoveredButton(null);

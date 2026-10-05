@@ -12,6 +12,23 @@ export const reelSymbols = [
 
 export const availableBets = [10, 20, 50, 100, 200, 500];
 
+export const FREE_GAMES_CONFIG = {
+  /** Win multiplier applied to every win during free spins */
+  MULTIPLIER: 2,
+  /** Number of free spins awarded per number of scatter symbols landed */
+  SPINS_FOR_SCATTERS: { 3: 10, 4: 15, 5: 20 } as Record<number, number>,
+  /** How long the "free spins won" intro popup stays on screen */
+  INTRO_DURATION_MS: 2800,
+  /** How long the "free spins complete" outro popup stays on screen */
+  OUTRO_DURATION_MS: 3200,
+  /** Delay before the next auto free spin when the previous one had no win */
+  NEXT_SPIN_DELAY_MS: 600,
+  /** Delay before the next auto free spin when the previous one had a win */
+  NEXT_SPIN_DELAY_AFTER_WIN_MS: 1800,
+  /** Y position (frame-local) of the free spins HUD pill */
+  HUD_Y: -262,
+};
+
 export const FRAME_CONFIG = {
   WIDTH: 1270,
   HEIGHT: 720,
