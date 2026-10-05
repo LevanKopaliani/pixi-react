@@ -1,32 +1,18 @@
 import { useEffect, useState } from "react";
 import { type Graphics as PixiGraphics } from "pixi.js";
-import { useSlotGame, type WinningLineInfo } from "@/pokie/slot-controller";
-import { REEL_CONFIG } from "./Reels";
-
-export const LINE_COLORS: Record<
-  string,
-  { hex: number; hexStr: string; name: string }
-> = {
-  "0": { hex: 0xffd700, hexStr: "#FFD700", name: "Center Line" },
-  "1": { hex: 0x00e5ff, hexStr: "#00E5FF", name: "Top Line" },
-  "2": { hex: 0xff3366, hexStr: "#FF3366", name: "Bottom Line" },
-  "3": { hex: 0x00ff66, hexStr: "#00FF66", name: "V Line" },
-  "4": { hex: 0xff9900, hexStr: "#FF9900", name: "Inverted V" },
-  "5": { hex: 0xa855f7, hexStr: "#A855F7", name: "M Arch" },
-  "6": { hex: 0xff00cc, hexStr: "#FF00CC", name: "W Arch" },
-  "7": { hex: 0x38bdf8, hexStr: "#38BDF8", name: "Staircase" },
-};
+import { useSlotGame } from "@/pokie/slot-controller";
+import { LINE_COLORS, REEL_CONFIG } from "@/config";
+import type { WinningLineInfo } from "@/types";
 
 export default function WinningLinesOverlay() {
   const { winningLines, isSpinning } = useSlotGame();
   const [activeLineIdx, setActiveLineIdx] = useState(0);
 
-  // Reset active index when new winning lines arrive
   useEffect(() => {
     setActiveLineIdx(0);
   }, [winningLines]);
 
-  // Cycle through multiple winning lines if more than 1
+  // animate multiple winning lines
   useEffect(() => {
     if (isSpinning || winningLines.length <= 1) return;
 
@@ -73,7 +59,7 @@ export default function WinningLinesOverlay() {
   const drawLines = (g: PixiGraphics) => {
     g.clear();
 
-    // 1. Draw inactive winning lines faintly in the background if multiple lines won
+    // Draw winning lines
     winningLines.forEach((wl, idx) => {
       if (idx === activeLineIdx) return;
       const c = LINE_COLORS[wl.lineId]?.hex || 0xffffff;
@@ -88,7 +74,7 @@ export default function WinningLinesOverlay() {
       }
     });
 
-    // 2. Draw full payline path faintly for active line
+    // Draw full payline
     const activePoints = activeLine.definition.map((row, col) =>
       getCellCenter(col, row),
     );
@@ -100,7 +86,7 @@ export default function WinningLinesOverlay() {
       g.stroke({ width: 2.5, color: colorInfo.hex, alpha: 0.35 });
     }
 
-    // 3. Draw winning line segment (the reels that actually matched)
+    //  Draw winning line segment
     const participatingCols =
       activeLine.symbolsPositions && activeLine.symbolsPositions.length > 0
         ? activeLine.symbolsPositions

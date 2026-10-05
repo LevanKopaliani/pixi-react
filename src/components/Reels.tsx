@@ -7,10 +7,7 @@ import {
 import { useRef, useMemo, useState, useEffect, forwardRef } from "react";
 import gsap from "gsap";
 
-import {
-  customGameSession,
-  customGameSessionSerializer,
-} from "@/pokie/simple-slot";
+import { customGameSession, customGameSessionSerializer } from "@/pokie";
 
 import dance from "@/assets/game/dance.png";
 import freespins from "@/assets/game/freespins.png";
@@ -19,10 +16,11 @@ import khinkali from "@/assets/game/khinkali.png";
 import jack from "@/assets/game/jack.png";
 import sufra from "@/assets/game/sufra.png";
 import ten from "@/assets/game/ten.png";
-import { reelSymbols } from "@/config";
+import { REEL_CONFIG, reelSymbols } from "@/config";
 import { registerSpinAnimation, useSlotGame } from "@/pokie/slot-controller";
+import type { ReelColumnProps, ReelsProps } from "@/types";
 
-export const symbolAssetMap: Record<string, string> = {
+const symbolAssetMap: Record<string, string> = {
   ten,
   jack,
   grape,
@@ -39,7 +37,7 @@ export const symbolAssetMap: Record<string, string> = {
 const symbolTextureCache = new Map<string, Texture>();
 let loadingPromise: Promise<Map<string, Texture>> | null = null;
 
-export async function loadSymbolTextures(): Promise<Map<string, Texture>> {
+async function loadSymbolTextures(): Promise<Map<string, Texture>> {
   if (symbolTextureCache.size > 0) {
     return symbolTextureCache;
   }
@@ -62,39 +60,20 @@ export async function loadSymbolTextures(): Promise<Map<string, Texture>> {
   return loadingPromise;
 }
 
-export function getSymbolTexture(symbolKey: string): Texture | undefined {
+function getSymbolTexture(symbolKey: string): Texture | undefined {
   const key = symbolKey?.toLowerCase();
   return symbolTextureCache.get(key);
 }
 
-export const initialData =
+const initialData =
   customGameSessionSerializer.getInitialData(customGameSession);
 
 // 5 distinct default symbol strips for the 5 reels, initialized from pokie game session
-export const DEFAULT_REEL_STRIPS: string[][] = initialData?.reelsSymbols
+const DEFAULT_REEL_STRIPS: string[][] = initialData?.reelsSymbols
   ? initialData.reelsSymbols.map((strip: string[]) =>
       strip.map((s) => s.toLowerCase()),
     )
   : [];
-
-export const REEL_CONFIG = {
-  NUM_REELS: 5,
-  NUM_ROWS: 3,
-  BUFFER_ROWS: 0,
-  SYMBOL_WIDTH: 140,
-  SYMBOL_HEIGHT: 140,
-  REEL_GAP: 20,
-  ROW_GAP: 8,
-  // Coordinates precisely centered inside the frame inner window
-  START_X: -390,
-  START_Y: -224,
-};
-
-export interface ReelColumnProps {
-  x: number;
-  y: number;
-  columnData?: string[];
-}
 
 export const ReelColumn = forwardRef<PixiContainer, ReelColumnProps>(
   function ReelColumn({ x, y, columnData = reelSymbols }, ref) {
@@ -110,6 +89,8 @@ export const ReelColumn = forwardRef<PixiContainer, ReelColumnProps>(
       <pixiContainer ref={ref} x={x} y={y}>
         {Array.from({ length: TOTAL_SLOTS }, (_, i) => {
           const symbolKey = pool[i % pool.length];
+
+          console.log("symbolKey", symbolKey);
           const texture = getSymbolTexture(symbolKey);
 
           return (
@@ -127,11 +108,6 @@ export const ReelColumn = forwardRef<PixiContainer, ReelColumnProps>(
     );
   },
 );
-
-export interface ReelsProps {
-  reels?: string[][];
-  speed?: number;
-}
 
 export default function Reels({ reels: propReels }: ReelsProps) {
   const slot = useSlotGame();
@@ -175,6 +151,8 @@ export default function Reels({ reels: propReels }: ReelsProps) {
         { length: TOTAL_SLOTS },
         (_, i) => i * step,
       );
+
+      console.log("outcomeSymbols", originalPositions);
 
       const spinReel = (reel: PixiContainer, reelIndex: number) => {
         const sprites = reel.children as PixiSprite[];

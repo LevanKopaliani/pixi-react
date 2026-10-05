@@ -8,16 +8,7 @@ import { useEffect, useState, useRef } from "react";
 import frame from "@/assets/game/frame.png";
 import GameControls from "./GameControls";
 import WinningLinesOverlay from "./WinningLinesOverlay";
-
-export const FRAME_CONFIG = {
-  WIDTH: 1270,
-  HEIGHT: 720,
-  // Inner transparent window dimensions and offset relative to frame center (0, 0)
-  INNER_WIDTH: 800,
-  INNER_HEIGHT: 437,
-  INNER_OFFSET_X: 0,
-  INNER_OFFSET_Y: -6,
-};
+import { FRAME_CONFIG } from "@/config";
 
 const ReelsFrame = (props: React.PropsWithChildren) => {
   const [texture, setTexture] = useState<Texture | null>(null);

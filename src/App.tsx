@@ -1,10 +1,17 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Application, extend } from "@pixi/react";
 import "./App.css";
 import { Container, Sprite, Graphics, Text } from "pixi.js";
 import ReelsFrame from "@/components/ReelsFrame";
 import Reels from "@/components/Reels";
 import GameBackground from "@/components/GameBackground";
+import { initializeData } from "./pokie/data";
+
+import {
+  customGameSession as session,
+  customGameSessionSerializer as serializer,
+  customScenarios as scenarios,
+} from "@/pokie";
 
 extend({ Sprite, Container, Graphics, Text });
 
@@ -20,6 +27,10 @@ function App() {
     autoDensity: true,
     resolution: window.devicePixelRatio || 1,
   };
+
+  useEffect(() => {
+    initializeData(session, serializer, scenarios);
+  }, []);
 
   return (
     <section className="w-full min-h-dvh flex items-center justify-center">

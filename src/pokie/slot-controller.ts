@@ -1,27 +1,8 @@
 import { useState, useEffect } from "react";
-import {
-  customGameSession,
-  customGameSessionSerializer,
-} from "@/pokie/simple-slot";
+
 import { availableBets } from "@/config";
-
-export interface WinningLineInfo {
-  lineId: string;
-  definition: number[];
-  symbolId: string;
-  symbolsPositions: number[];
-  winAmount: number;
-}
-
-export interface SlotState {
-  balance: number;
-  bet: number;
-  win: number;
-  isSpinning: boolean;
-  reels: string[][];
-  winningLines: WinningLineInfo[];
-  speed: number;
-}
+import type { SlotState, WinningLineInfo } from "@/types";
+import { customGameSession, customGameSessionSerializer } from ".";
 
 const initialData =
   customGameSessionSerializer.getInitialData(customGameSession);
@@ -103,8 +84,7 @@ export async function spin(): Promise<boolean> {
 
   // Play round with pokie game session
   customGameSession.play();
-  const roundData =
-    customGameSessionSerializer.getRoundData(customGameSession);
+  const roundData = customGameSessionSerializer.getRoundData(customGameSession);
 
   // Extract winning lines from session
   const winningLines: WinningLineInfo[] = [];
@@ -143,35 +123,6 @@ export async function spin(): Promise<boolean> {
   notify();
 
   return true;
-}
-
-export function triggerTestWin(lineId: string = "0") {
-  const defaultDefs: Record<string, number[]> = {
-    "0": [1, 1, 1, 1, 1],
-    "1": [0, 0, 0, 0, 0],
-    "2": [2, 2, 2, 2, 2],
-    "3": [0, 1, 2, 1, 0],
-    "4": [2, 1, 0, 1, 2],
-    "5": [1, 0, 0, 0, 1],
-    "6": [1, 2, 2, 2, 1],
-    "7": [0, 0, 1, 2, 2],
-  };
-  const def = defaultDefs[lineId] || [1, 1, 1, 1, 1];
-  state.win = 40;
-  state.winningLines = [
-    {
-      lineId,
-      definition: def,
-      symbolId: "khinkali",
-      symbolsPositions: [0, 1, 2],
-      winAmount: 40,
-    },
-  ];
-  notify();
-}
-
-if (typeof window !== "undefined") {
-  (window as any).triggerTestWin = triggerTestWin;
 }
 
 export function useSlotGame() {

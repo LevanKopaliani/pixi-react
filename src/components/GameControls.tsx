@@ -3,18 +3,10 @@ import { useEffect, useState, useMemo } from "react";
 import desktopUIAtlas from "@/assets/ui/desktopUI.json";
 import desktopUIImage from "@/assets/ui/desktopUI.png";
 import { availableBets } from "@/config";
-import { customGameSession } from "@/pokie/simple-slot";
+import { customGameSession } from "@/pokie";
 
 import { useSlotGame } from "@/pokie/slot-controller";
-
-export interface GameControlsProps {
-  onSpin?: () => void;
-  isSpinning?: boolean;
-  balance?: number;
-  bet?: number;
-  win?: number;
-  onBetChange?: (bet: number) => void;
-}
+import type { GameControlsProps } from "@/types";
 
 const GameControls = ({
   onSpin,
@@ -24,6 +16,7 @@ const GameControls = ({
   win: propWin,
   onBetChange,
 }: GameControlsProps) => {
+  //
   const [sheet, setSheet] = useState<Spritesheet | null>(null);
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
   const [pressedButton, setPressedButton] = useState<string | null>(null);
