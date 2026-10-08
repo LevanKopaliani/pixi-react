@@ -17,7 +17,7 @@ const DEEP_BROWN = 0x3d1702;
 const PANEL = 0x2a0d05;
 
 const PANEL_W = 600;
-const PANEL_H = 330;
+const PANEL_H = 380;
 
 /** Sunburst rays drawn behind the popup panel */
 function drawRays(g: PixiGraphics) {
@@ -77,18 +77,21 @@ function drawPanel(g: PixiGraphics) {
 /**
  * Free spins presentation layer:
  *  - HUD pill with remaining spins, multiplier and accumulated win while free spins are running
- *  - Intro popup when free spins are triggered
- *  - Outro popup with an animated total-win counter when free spins end
+ *  - Intro popup when free spins are triggered (with manual START button)
+ *  - Outro popup with an animated total-win counter and manual COLLECT button
  *
  * Coordinates are local to the ReelsFrame container (0,0 = frame centre).
  */
 export default function FreeGamesOverlay() {
-  const { freeGames, featureMessage } = useSlotGame();
+  const { freeGames, featureMessage, startFreeSpins, closeOutro } =
+    useSlotGame();
 
   const popupRef = useRef<PixiContainer | null>(null);
   const raysRef = useRef<PixiGraphics | null>(null);
   const hudRef = useRef<PixiContainer | null>(null);
   const [displayTotal, setDisplayTotal] = useState(0);
+  const [hoveredButton, setHoveredButton] = useState<string | null>(null);
+  const [pressedButton, setPressedButton] = useState<string | null>(null);
 
   // Popup entrance animation + outro win counter
   useEffect(() => {
@@ -255,11 +258,11 @@ export default function FreeGamesOverlay() {
               <>
                 <pixiText
                   text="CONGRATULATIONS!"
-                  y={-112}
+                  y={-135}
                   anchor={0.5}
                   style={{
                     fontFamily: FONT_FAMILY,
-                    fontSize: 24,
+                    fontSize: 22,
                     fontWeight: "bold",
                     fill: GOLD_LIGHT,
                     letterSpacing: 3,
@@ -267,79 +270,7 @@ export default function FreeGamesOverlay() {
                 />
                 <pixiText
                   text={String(featureMessage.freeSpins)}
-                  y={-30}
-                  anchor={0.5}
-                  style={{
-                    fontFamily: FONT_FAMILY,
-                    fontSize: 104,
-                    fontWeight: "900",
-                    fill: GOLD,
-                    stroke: { color: DEEP_BROWN, width: 8 },
-                    dropShadow: {
-                      color: 0x000000,
-                      alpha: 0.6,
-                      blur: 6,
-                      distance: 4,
-                      angle: Math.PI / 2,
-                    },
-                  }}
-                />
-                <pixiText
-                  text="FREE SPINS"
-                  y={52}
-                  anchor={0.5}
-                  style={{
-                    fontFamily: FONT_FAMILY,
-                    fontSize: 42,
-                    fontWeight: "900",
-                    fill: GOLD,
-                    letterSpacing: 4,
-                    stroke: { color: DEEP_BROWN, width: 6 },
-                  }}
-                />
-                <pixiText
-                  text={`ALL WINS x${FREE_GAMES_CONFIG.MULTIPLIER}`}
-                  y={112}
-                  anchor={0.5}
-                  style={{
-                    fontFamily: FONT_FAMILY,
-                    fontSize: 20,
-                    fontWeight: "bold",
-                    fill: 0xffffff,
-                    letterSpacing: 2,
-                  }}
-                />
-              </>
-            ) : (
-              <>
-                <pixiText
-                  text="FREE SPINS COMPLETE"
-                  y={-112}
-                  anchor={0.5}
-                  style={{
-                    fontFamily: FONT_FAMILY,
-                    fontSize: 24,
-                    fontWeight: "bold",
-                    fill: GOLD_LIGHT,
-                    letterSpacing: 3,
-                  }}
-                />
-                <pixiText
-                  text="YOU WON"
                   y={-62}
-                  anchor={0.5}
-                  style={{
-                    fontFamily: FONT_FAMILY,
-                    fontSize: 34,
-                    fontWeight: "900",
-                    fill: GOLD,
-                    letterSpacing: 4,
-                    stroke: { color: DEEP_BROWN, width: 5 },
-                  }}
-                />
-                <pixiText
-                  text={Math.round(displayTotal).toLocaleString()}
-                  y={18}
                   anchor={0.5}
                   style={{
                     fontFamily: FONT_FAMILY,
@@ -357,17 +288,223 @@ export default function FreeGamesOverlay() {
                   }}
                 />
                 <pixiText
-                  text={`IN ${featureMessage.freeSpins} FREE SPINS`}
-                  y={108}
+                  text="FREE SPINS"
+                  y={12}
                   anchor={0.5}
                   style={{
                     fontFamily: FONT_FAMILY,
-                    fontSize: 20,
+                    fontSize: 36,
+                    fontWeight: "900",
+                    fill: GOLD,
+                    letterSpacing: 4,
+                    stroke: { color: DEEP_BROWN, width: 6 },
+                  }}
+                />
+                <pixiText
+                  text={`ALL WINS x${FREE_GAMES_CONFIG.MULTIPLIER}`}
+                  y={62}
+                  anchor={0.5}
+                  style={{
+                    fontFamily: FONT_FAMILY,
+                    fontSize: 18,
                     fontWeight: "bold",
                     fill: 0xffffff,
                     letterSpacing: 2,
                   }}
                 />
+
+                {/* Interactive START Button */}
+                <pixiContainer
+                  x={0}
+                  y={122}
+                  eventMode="static"
+                  cursor="pointer"
+                  scale={
+                    pressedButton === "start"
+                      ? 0.95
+                      : hoveredButton === "start"
+                        ? 1.05
+                        : 1
+                  }
+                  onPointerEnter={() => setHoveredButton("start")}
+                  onPointerLeave={() => {
+                    setHoveredButton(null);
+                    setPressedButton(null);
+                  }}
+                  onPointerDown={() => setPressedButton("start")}
+                  onPointerUp={(e) => {
+                    e?.stopPropagation?.();
+                    setPressedButton(null);
+                    startFreeSpins?.();
+                  }}
+                >
+                  <pixiGraphics
+                    draw={(g) => {
+                      g.clear();
+                      const btnW = 200;
+                      const btnH = 46;
+                      const x = -btnW / 2;
+                      const y = -btnH / 2;
+                      const isHover = hoveredButton === "start";
+
+                      // Outer button glow
+                      g.roundRect(x - 5, y - 5, btnW + 10, btnH + 10, 28).fill({
+                        color: GOLD,
+                        alpha: isHover ? 0.45 : 0.22,
+                      });
+
+                      // Main pill body
+                      g.roundRect(x, y, btnW, btnH, 23)
+                        .fill({ color: isHover ? 0xffdf6d : GOLD, alpha: 1 })
+                        .stroke({ width: 3, color: 0xffffff });
+
+                      // Gloss highlight
+                      g.roundRect(x + 4, y + 4, btnW - 8, btnH / 2 - 4, 16).fill({
+                        color: 0xffffff,
+                        alpha: 0.35,
+                      });
+                    }}
+                  />
+                  <pixiText
+                    text="START"
+                    x={0}
+                    y={0}
+                    anchor={0.5}
+                    style={{
+                      fontFamily: FONT_FAMILY,
+                      fontSize: 22,
+                      fontWeight: "900",
+                      fill: DEEP_BROWN,
+                      letterSpacing: 2,
+                    }}
+                  />
+                </pixiContainer>
+              </>
+            ) : (
+              <>
+                <pixiText
+                  text="FREE SPINS COMPLETE"
+                  y={-135}
+                  anchor={0.5}
+                  style={{
+                    fontFamily: FONT_FAMILY,
+                    fontSize: 22,
+                    fontWeight: "bold",
+                    fill: GOLD_LIGHT,
+                    letterSpacing: 3,
+                  }}
+                />
+                <pixiText
+                  text="YOU WON"
+                  y={-85}
+                  anchor={0.5}
+                  style={{
+                    fontFamily: FONT_FAMILY,
+                    fontSize: 28,
+                    fontWeight: "900",
+                    fill: GOLD,
+                    letterSpacing: 4,
+                    stroke: { color: DEEP_BROWN, width: 5 },
+                  }}
+                />
+                <pixiText
+                  text={Math.round(displayTotal).toLocaleString()}
+                  y={-15}
+                  anchor={0.5}
+                  style={{
+                    fontFamily: FONT_FAMILY,
+                    fontSize: 76,
+                    fontWeight: "900",
+                    fill: GOLD,
+                    stroke: { color: DEEP_BROWN, width: 8 },
+                    dropShadow: {
+                      color: 0x000000,
+                      alpha: 0.6,
+                      blur: 6,
+                      distance: 4,
+                      angle: Math.PI / 2,
+                    },
+                  }}
+                />
+                <pixiText
+                  text={`IN ${featureMessage.freeSpins} FREE SPINS`}
+                  y={58}
+                  anchor={0.5}
+                  style={{
+                    fontFamily: FONT_FAMILY,
+                    fontSize: 18,
+                    fontWeight: "bold",
+                    fill: 0xffffff,
+                    letterSpacing: 2,
+                  }}
+                />
+
+                {/* Interactive COLLECT Button */}
+                <pixiContainer
+                  x={0}
+                  y={122}
+                  eventMode="static"
+                  cursor="pointer"
+                  scale={
+                    pressedButton === "collect"
+                      ? 0.95
+                      : hoveredButton === "collect"
+                        ? 1.05
+                        : 1
+                  }
+                  onPointerEnter={() => setHoveredButton("collect")}
+                  onPointerLeave={() => {
+                    setHoveredButton(null);
+                    setPressedButton(null);
+                  }}
+                  onPointerDown={() => setPressedButton("collect")}
+                  onPointerUp={(e) => {
+                    e?.stopPropagation?.();
+                    setPressedButton(null);
+                    closeOutro?.();
+                  }}
+                >
+                  <pixiGraphics
+                    draw={(g) => {
+                      g.clear();
+                      const btnW = 200;
+                      const btnH = 46;
+                      const x = -btnW / 2;
+                      const y = -btnH / 2;
+                      const isHover = hoveredButton === "collect";
+
+                      // Outer button glow
+                      g.roundRect(x - 5, y - 5, btnW + 10, btnH + 10, 28).fill({
+                        color: GOLD,
+                        alpha: isHover ? 0.45 : 0.22,
+                      });
+
+                      // Main pill body
+                      g.roundRect(x, y, btnW, btnH, 23)
+                        .fill({ color: isHover ? 0xffdf6d : GOLD, alpha: 1 })
+                        .stroke({ width: 3, color: 0xffffff });
+
+                      // Gloss highlight
+                      g.roundRect(x + 4, y + 4, btnW - 8, btnH / 2 - 4, 16).fill({
+                        color: 0xffffff,
+                        alpha: 0.35,
+                      });
+                    }}
+                  />
+                  <pixiText
+                    text="COLLECT"
+                    x={0}
+                    y={0}
+                    anchor={0.5}
+                    style={{
+                      fontFamily: FONT_FAMILY,
+                      fontSize: 22,
+                      fontWeight: "900",
+                      fill: DEEP_BROWN,
+                      letterSpacing: 2,
+                    }}
+                  />
+                </pixiContainer>
               </>
             )}
           </pixiContainer>

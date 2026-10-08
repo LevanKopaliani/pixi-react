@@ -6,6 +6,7 @@ import {
 } from "pixi.js";
 import { useEffect, useState, useRef } from "react";
 import frame from "@/assets/game/frame.png";
+import frameBackground from "@/assets/game/frame-background.png";
 import GameControls from "./GameControls";
 import WinningLinesOverlay from "./WinningLinesOverlay";
 import FreeGamesOverlay from "./FreeGamesOverlay";
@@ -13,6 +14,7 @@ import { FRAME_CONFIG } from "@/config";
 
 const ReelsFrame = (props: React.PropsWithChildren) => {
   const [texture, setTexture] = useState<Texture | null>(null);
+  const [bgTexture, setBgTexture] = useState<Texture | null>(null);
   const [screenSize, setScreenSize] = useState({
     width: typeof window !== "undefined" ? window.innerWidth : 1270,
     height: typeof window !== "undefined" ? window.innerHeight : 720,
@@ -41,14 +43,15 @@ const ReelsFrame = (props: React.PropsWithChildren) => {
   useEffect(() => {
     let isMounted = true;
 
-    Assets.load(frame)
-      .then((loadedTexture) => {
+    Promise.all([Assets.load(frame), Assets.load(frameBackground)])
+      .then(([loadedFrame, loadedFrameBg]) => {
         if (isMounted) {
-          setTexture(loadedTexture);
+          setTexture(loadedFrame);
+          setBgTexture(loadedFrameBg);
         }
       })
       .catch((error) => {
-        console.error("Failed to load frame texture:", error);
+        console.error("Failed to load frame textures:", error);
       });
 
     return () => {
@@ -56,7 +59,7 @@ const ReelsFrame = (props: React.PropsWithChildren) => {
     };
   }, []);
 
-  if (!texture) {
+  if (!texture || !bgTexture) {
     return null;
   }
 
@@ -73,6 +76,16 @@ const ReelsFrame = (props: React.PropsWithChildren) => {
 
   return (
     <pixiContainer x={centerX} y={centerY} scale={scale}>
+      {/* Frame background (rendered behind reels and under the frame) */}
+      <pixiSprite
+        texture={bgTexture}
+        x={0}
+        y={FRAME_CONFIG.INNER_OFFSET_Y}
+        anchor={0.5}
+        width={FRAME_CONFIG.INNER_WIDTH + 20}
+        height={FRAME_CONFIG.INNER_HEIGHT + 20}
+      />
+
       {/* Masked container for reels: clips rotating symbols within the inner frame window */}
       <pixiContainer
         ref={(el) => {

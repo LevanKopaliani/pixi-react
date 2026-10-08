@@ -51,17 +51,9 @@ function notify() {
 const wait = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-let nextFreeSpinTimer: ReturnType<typeof setTimeout> | null = null;
+let outroTimer: ReturnType<typeof setTimeout> | null = null;
 
-function scheduleNextFreeSpin(delay: number) {
-  if (nextFreeSpinTimer) clearTimeout(nextFreeSpinTimer);
-  nextFreeSpinTimer = setTimeout(() => {
-    nextFreeSpinTimer = null;
-    void spin();
-  }, delay);
-}
-
-/** True while the player must not interact (free spins feature or popup in progress). */
+/** True while bet adjustment is locked (free spins feature or popup in progress). */
 function isFeatureLocked() {
   return state.freeGames.active || state.featureMessage !== null;
 }
@@ -128,15 +120,15 @@ function extractWinningScatters(): WinningScatterInfo[] {
 }
 
 /**
- * Plays a single round. Free spins are played automatically: once triggered, this function
- * schedules itself until all awarded free spins are played, then shows the summary popup.
+ * Plays a single round. Free spins are played manually by the player.
+ * Once triggered, an intro popup is shown until the player manually starts the bonus mode.
+ * Each free spin is initiated by the player clicking the Spin button.
  *
- * @param fromUser - true when the spin was requested by the player (spin button). Player spins are
- *                   ignored while the free spins feature is running.
+ * @param fromUser - true when the spin was requested by the player (spin button).
  */
 export async function spin(fromUser = false): Promise<boolean> {
+  void fromUser;
   if (state.isSpinning || state.featureMessage) return false;
-  if (fromUser && state.freeGames.active) return false;
 
   const isFreeRound = customGameSession.isNextRoundFreeGame();
   if (!customGameSession.canPlayNextGame()) {
@@ -177,16 +169,13 @@ export async function spin(fromUser = false): Promise<boolean> {
   const hasMoreFreeSpins = customGameSession.isNextRoundFreeGame();
   const featureJustEnded = isFreeRound && !hasMoreFreeSpins;
 
-  state.isSpinning = false;
   state.balance = roundData.credits ?? state.balance;
   state.win = roundData.totalWin ?? 0;
   state.winningLines = winningLines;
   state.winningScatters = winningScatters;
-  state.freeGames = readFreeGamesState(isFreeRound || hasMoreFreeSpins);
   if (outcome.length > 0) {
     state.reels = outcome;
   }
-  notify();
 
   const delayAfterRound =
     state.win > 0
@@ -194,22 +183,24 @@ export async function spin(fromUser = false): Promise<boolean> {
       : FREE_GAMES_CONFIG.NEXT_SPIN_DELAY_MS;
 
   if (!isFreeRound && wonFreeSpins > 0) {
-    // Free spins triggered from the base game: show the scatters, then the intro popup.
+    // Keep isSpinning=true so player cannot click Spin during scatter presentation
+    // Keep freeGames.active=false so HUD does not show until intro popup is accepted
+    state.isSpinning = true;
+    state.freeGames = readFreeGamesState(false);
+    notify();
+
+    // Show the winning scatters, then show the intro popup.
     await wait(TRIGGER_PRESENTATION_MS);
+    state.isSpinning = false;
     state.featureMessage = { type: "intro", freeSpins: wonFreeSpins };
     notify();
-
-    await wait(FREE_GAMES_CONFIG.INTRO_DURATION_MS);
-    state.featureMessage = null;
-    state.win = 0;
-    state.winningLines = [];
-    state.winningScatters = [];
+  } else if (featureJustEnded) {
+    state.isSpinning = true;
+    state.freeGames = readFreeGamesState(true);
     notify();
 
-    scheduleNextFreeSpin(FREE_GAMES_CONFIG.NEXT_SPIN_DELAY_MS);
-  } else if (featureJustEnded) {
-    // Last free spin played: pokie has already credited the free games bank to the balance.
     await wait(delayAfterRound);
+    state.isSpinning = false;
     const { bank, total } = state.freeGames;
     state.featureMessage = { type: "outro", totalWin: bank, freeSpins: total };
     state.win = bank;
@@ -217,15 +208,42 @@ export async function spin(fromUser = false): Promise<boolean> {
     state.winningScatters = [];
     notify();
 
-    await wait(FREE_GAMES_CONFIG.OUTRO_DURATION_MS);
-    state.featureMessage = null;
-    state.freeGames = { ...state.freeGames, active: false };
+    // Fallback auto-close if player doesn't click COLLECT
+    if (outroTimer) clearTimeout(outroTimer);
+    outroTimer = setTimeout(() => {
+      closeOutro();
+    }, FREE_GAMES_CONFIG.OUTRO_DURATION_MS);
+  } else {
+    // Normal round (base game or ongoing free spin)
+    state.isSpinning = false;
+    state.freeGames = readFreeGamesState(isFreeRound);
     notify();
-  } else if (hasMoreFreeSpins) {
-    scheduleNextFreeSpin(delayAfterRound);
   }
 
   return true;
+}
+
+/** Dismisses the intro modal and enters the active free spins mode waiting for player spins. */
+export function startFreeSpins() {
+  if (state.featureMessage?.type !== "intro") return;
+  state.featureMessage = null;
+  state.win = 0;
+  state.winningLines = [];
+  state.winningScatters = [];
+  state.freeGames = readFreeGamesState(true);
+  notify();
+}
+
+/** Dismisses the outro modal and returns to the base game. */
+export function closeOutro() {
+  if (outroTimer) {
+    clearTimeout(outroTimer);
+    outroTimer = null;
+  }
+  if (state.featureMessage?.type !== "outro") return;
+  state.featureMessage = null;
+  state.freeGames = readFreeGamesState(false);
+  notify();
 }
 
 export function useSlotGame() {
@@ -247,6 +265,8 @@ export function useSlotGame() {
     setBet,
     prevBet,
     nextBet,
+    startFreeSpins,
+    closeOutro,
     availableBets,
     gameSession: customGameSession,
     gameSessionSerializer: customGameSessionSerializer,

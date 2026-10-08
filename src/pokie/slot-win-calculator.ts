@@ -1,6 +1,57 @@
 import { SlotConfig } from "./slot-config.ts";
-import { VideoSlotWinCalculator } from "pokie";
+import {
+  type ScatterWinCalculating,
+  type SymbolsCombinationDescribing,
+  type VideoSlotConfigDescribing,
+  SymbolsCombinationsAnalyzer,
+  VideoSlotWinCalculator,
+  type WinningScatterDescribing,
+  WinningScatter,
+} from "pokie";
 import { FREE_GAMES_CONFIG } from "@/config";
+
+/**
+ * Evaluates all scatter symbols (e.g. freespins1 and freespins2) as a unified group,
+ * so landing any 3 or more scatter symbols across the reels triggers the scatter win and free spins.
+ */
+export class UnifiedScatterWinCalculator
+  implements ScatterWinCalculating<string>
+{
+  private readonly config: VideoSlotConfigDescribing<string>;
+
+  constructor(config: VideoSlotConfigDescribing<string>) {
+    this.config = config;
+  }
+
+  public calculateWinningScatters(
+    bet: number,
+    symbolsCombination: SymbolsCombinationDescribing<string>,
+  ): Record<string, WinningScatterDescribing<string>> {
+    const matrix = symbolsCombination.toMatrix();
+    const scatterSymbols = this.config.getScatterSymbols() ?? [];
+    const allPositions: number[][] = [];
+
+    for (const scatter of scatterSymbols) {
+      const positions = SymbolsCombinationsAnalyzer.getScatterSymbolsPositions(
+        matrix,
+        scatter,
+      );
+      allPositions.push(...positions);
+    }
+
+    const count = allPositions.length;
+    if (count >= 3) {
+      const primaryId = scatterSymbols[0] || "freespins1";
+      const winAmount = this.config
+        .getPaytable()
+        .getWinAmountForSymbol(primaryId, count, bet);
+      return {
+        [primaryId]: new WinningScatter(primaryId, allPositions, winAmount),
+      };
+    }
+    return {};
+  }
+}
 
 /*
  * pokie credits the session using `getWinEvaluationResult().getTotalWin()`, so multiplying only the
@@ -9,9 +60,6 @@ import { FREE_GAMES_CONFIG } from "@/config";
  * Instead, we plug a multiplier resolver into pokie's win evaluation pipeline. Every win component
  * (lines and scatters) goes through `resolve()`, so the total win, the credited amount, the free
  * games bank and the serialized round data all stay consistent.
- *
- * `MultiplierResolver` is not exported from the pokie root, so we provide a structurally compatible
- * object and cast it to the expected option type.
  */
 type WinCalculatorOptions = NonNullable<
   ConstructorParameters<typeof VideoSlotWinCalculator<string>>[6]
@@ -52,8 +100,16 @@ function createFreeGamesMultiplierResolver(
 
 export class SlotSessionWinCalculator extends VideoSlotWinCalculator {
   constructor(config: SlotConfig) {
-    super(config, undefined, undefined, undefined, undefined, undefined, {
-      multiplierResolver: createFreeGamesMultiplierResolver(config),
-    });
+    super(
+      config,
+      undefined,
+      new UnifiedScatterWinCalculator(config),
+      undefined,
+      undefined,
+      undefined,
+      {
+        multiplierResolver: createFreeGamesMultiplierResolver(config),
+      },
+    );
   }
 }

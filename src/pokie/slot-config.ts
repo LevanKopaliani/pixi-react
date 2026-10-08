@@ -5,7 +5,6 @@ import {
   LeftToRightLinesPatterns,
   LinesDefinitionsFor5x3,
   Paytable,
-  ScatteredLinesPatterns,
   SymbolsSequence,
   VideoSlotWithFreeGamesConfig,
 } from "pokie";
@@ -14,7 +13,7 @@ export class SlotConfig extends VideoSlotWithFreeGamesConfig {
   private readonly normalSequences: SymbolsSequence[];
   private readonly freeGamesSequences: SymbolsSequence[];
   private readonly normalPatterns: LeftToRightLinesPatterns;
-  private readonly freeGamesPatterns: ScatteredLinesPatterns;
+  private readonly freeGamesPatterns: LeftToRightLinesPatterns;
   private freeGamesMode = false;
 
   constructor() {
@@ -89,25 +88,16 @@ export class SlotConfig extends VideoSlotWithFreeGamesConfig {
     pt.setPayoutForSymbol("freespins2", 4, 20);
     pt.setPayoutForSymbol("freespins2", 5, 30);
 
-    // this.getAvailableSymbols()
-    //   .filter((symbol) => !this.isSymbolWild(symbol))
-    //   .forEach((symbol) => {
-    //     pt.setPayoutForSymbol(symbol, 2, 1);
-    //     pt.setPayoutForSymbol(symbol, 3, 2);
-    //     pt.setPayoutForSymbol(symbol, 4, 3);
-    //     pt.setPayoutForSymbol(symbol, 5, 4);
-    //   });
-
     this.setPaytable(pt);
 
     this.normalPatterns = new LeftToRightLinesPatterns(
       this.getReelsNumber(),
-      2,
+      3,
     );
 
-    this.freeGamesPatterns = new ScatteredLinesPatterns(
+    this.freeGamesPatterns = new LeftToRightLinesPatterns(
       this.getReelsNumber(),
-      2,
+      3,
     );
 
     this.setLinesDefinitions(new LinesDefinitionsFor5x3());
@@ -117,11 +107,13 @@ export class SlotConfig extends VideoSlotWithFreeGamesConfig {
       .map((sequence) => new SymbolsSequence().fromArray(sequence.toArray()));
     this.freeGamesSequences = super
       .getSymbolsSequences()
-      .map((sequence) =>
-        new SymbolsSequence()
-          .fromArray(sequence.toArray())
-          .removeAllSymbols(this.getScatterSymbols()[0]),
-      );
+      .map((sequence) => {
+        const seq = new SymbolsSequence().fromArray(sequence.toArray());
+        this.getScatterSymbols().forEach((scatter) =>
+          seq.removeAllSymbols(scatter),
+        );
+        return seq;
+      });
     // sequence.fromNumbersOfSymbols({
     //   ten: 5,
     //   jack: 5,

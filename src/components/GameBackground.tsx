@@ -1,6 +1,6 @@
 import { Assets, type Texture } from "pixi.js";
 import { useEffect, useState } from "react";
-import background from "@/assets/game/frame-background.png";
+import background from "@/assets/ui/background-image.jpg";
 
 const GameBackground = () => {
   const [texture, setTexture] = useState<Texture | null>(null);
@@ -37,14 +37,21 @@ const GameBackground = () => {
 
   if (!texture) return null;
 
+  const scale = Math.max(
+    screenSize.width / texture.width,
+    screenSize.height / texture.height,
+  );
+  const width = texture.width * scale;
+  const height = texture.height * scale;
+
   return (
     <pixiSprite
       texture={texture}
       x={screenSize.width / 2}
       y={screenSize.height / 2}
       anchor={0.5}
-      width={screenSize.width}
-      height={screenSize.height}
+      width={width}
+      height={height}
     />
   );
 };

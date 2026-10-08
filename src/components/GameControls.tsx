@@ -29,8 +29,9 @@ const GameControls = ({
   const balance = propBalance !== undefined ? propBalance : slot.balance;
   const win = propWin !== undefined ? propWin : slot.win;
   const activeSpinning = isSpinning || slot.isSpinning;
-  // Player input is locked while the free spins feature (or its popups) is running
-  const featureLocked = slot.freeGames.active || slot.featureMessage !== null;
+  // Bet is locked while spinning, during free spins mode, or during feature popups
+  const betLocked =
+    activeSpinning || slot.freeGames.active || slot.featureMessage !== null;
 
   const currentBetIndex = useMemo(() => {
     const idx = availableBets.indexOf(currentBet);
@@ -64,7 +65,7 @@ const GameControls = ({
   const { textures } = sheet;
 
   const handlePrevBet = () => {
-    if (activeSpinning) return;
+    if (betLocked) return;
     if (currentBetIndex > 0) {
       const newBet = availableBets[currentBetIndex - 1];
       gameSession.setBet(newBet);
@@ -74,7 +75,7 @@ const GameControls = ({
   };
 
   const handleNextBet = () => {
-    if (activeSpinning) return;
+    if (betLocked) return;
     if (currentBetIndex < availableBets.length - 1) {
       const newBet = availableBets[currentBetIndex + 1];
       gameSession.setBet(newBet);
@@ -84,7 +85,18 @@ const GameControls = ({
   };
 
   const handleSpinClick = () => {
-    if (activeSpinning || featureLocked) return;
+    if (activeSpinning) return;
+
+    if (slot.featureMessage?.type === "intro") {
+      slot.startFreeSpins?.();
+      return;
+    }
+
+    if (slot.featureMessage?.type === "outro") {
+      slot.closeOutro?.();
+      return;
+    }
+
     if (!gameSession.canPlayNextGame()) {
       console.warn("Insufficient balance in gameSession to play");
       return;
@@ -97,7 +109,6 @@ const GameControls = ({
   };
 
   // Determine textures based on state
-  const betLocked = activeSpinning || featureLocked;
   const isLeftDisabled = betLocked || currentBetIndex <= 0;
   const isRightDisabled =
     betLocked || currentBetIndex >= availableBets.length - 1;
@@ -125,15 +136,13 @@ const GameControls = ({
         ? textures["Info_Hover.png"]
         : textures["Info_Idle.png"];
 
-  const spinTexture = featureLocked
-    ? textures["Spin_Disabled.png"]
-    : activeSpinning
-      ? textures["Stop_Idle.png"]
-      : pressedButton === "spin"
-        ? textures["Spin_Pressed.png"]
-        : hoveredButton === "spin"
-          ? textures["Spin_Hover.png"]
-          : textures["Spin_Idle.png"];
+  const spinTexture = activeSpinning
+    ? textures["Stop_Idle.png"]
+    : pressedButton === "spin"
+      ? textures["Spin_Pressed.png"]
+      : hoveredButton === "spin"
+        ? textures["Spin_Hover.png"]
+        : textures["Spin_Idle.png"];
 
   const textStyle = {
     fontFamily:
@@ -302,14 +311,14 @@ const GameControls = ({
         anchor={0.5}
         width={115}
         height={115}
-        eventMode={featureLocked ? "none" : "static"}
-        cursor={featureLocked ? "default" : "pointer"}
-        onPointerEnter={() => setHoveredButton("spin")}
+        eventMode={activeSpinning ? "none" : "static"}
+        cursor={activeSpinning ? "default" : "pointer"}
+        onPointerEnter={() => !activeSpinning && setHoveredButton("spin")}
         onPointerLeave={() => {
           setHoveredButton(null);
           setPressedButton(null);
         }}
-        onPointerDown={() => setPressedButton("spin")}
+        onPointerDown={() => !activeSpinning && setPressedButton("spin")}
         onPointerUp={() => {
           setPressedButton(null);
           handleSpinClick();
