@@ -184,7 +184,13 @@ export default function FreeGamesOverlay() {
           <pixiGraphics
             draw={(g) => {
               g.clear();
-              g.roundRect(-hudWidth / 2, -hudHeight / 2, hudWidth, hudHeight, 22)
+              g.roundRect(
+                -hudWidth / 2,
+                -hudHeight / 2,
+                hudWidth,
+                hudHeight,
+                22,
+              )
                 .fill({ color: PANEL, alpha: 0.92 })
                 .stroke({ width: 3, color: GOLD });
               // Multiplier badge
@@ -240,7 +246,7 @@ export default function FreeGamesOverlay() {
       {/* ---------- Intro / Outro popup ---------- */}
       {featureMessage && (
         <pixiContainer>
-          <pixiGraphics draw={drawDim} eventMode="static" />
+          {/* <pixiGraphics draw={drawDim} eventMode="static" /> */}
           <pixiGraphics
             ref={(el) => {
               raysRef.current = el as PixiGraphics;
@@ -359,7 +365,13 @@ export default function FreeGamesOverlay() {
                         .stroke({ width: 3, color: 0xffffff });
 
                       // Gloss highlight
-                      g.roundRect(x + 4, y + 4, btnW - 8, btnH / 2 - 4, 16).fill({
+                      g.roundRect(
+                        x + 4,
+                        y + 4,
+                        btnW - 8,
+                        btnH / 2 - 4,
+                        16,
+                      ).fill({
                         color: 0xffffff,
                         alpha: 0.35,
                       });
@@ -485,7 +497,13 @@ export default function FreeGamesOverlay() {
                         .stroke({ width: 3, color: 0xffffff });
 
                       // Gloss highlight
-                      g.roundRect(x + 4, y + 4, btnW - 8, btnH / 2 - 4, 16).fill({
+                      g.roundRect(
+                        x + 4,
+                        y + 4,
+                        btnW - 8,
+                        btnH / 2 - 4,
+                        16,
+                      ).fill({
                         color: 0xffffff,
                         alpha: 0.35,
                       });

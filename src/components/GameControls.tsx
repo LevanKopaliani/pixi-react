@@ -85,7 +85,12 @@ const GameControls = ({
   };
 
   const handleSpinClick = () => {
-    if (activeSpinning) return;
+    // if (activeSpinning) return;
+    if (activeSpinning) {
+      console.log("gaiara ---------------------");
+      slot.quickStop?.();
+      return;
+    }
 
     if (slot.featureMessage?.type === "intro") {
       slot.startFreeSpins?.();
@@ -311,8 +316,8 @@ const GameControls = ({
         anchor={0.5}
         width={115}
         height={115}
-        eventMode={activeSpinning ? "none" : "static"}
-        cursor={activeSpinning ? "default" : "pointer"}
+        eventMode={"static"}
+        cursor="pointer"
         onPointerEnter={() => !activeSpinning && setHoveredButton("spin")}
         onPointerLeave={() => {
           setHoveredButton(null);

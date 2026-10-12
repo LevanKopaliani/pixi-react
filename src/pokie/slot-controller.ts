@@ -88,13 +88,31 @@ export function nextBet() {
 }
 
 export type SpinAnimationHandler = (outcome: string[][]) => Promise<void>;
+export type QuickStopHandler = () => void;
 let spinAnimationHandler: SpinAnimationHandler | null = null;
+let quickStopHandler: QuickStopHandler | null = null;
 
-export function registerSpinAnimation(handler: SpinAnimationHandler) {
+export function registerSpinAnimation(
+  handler: SpinAnimationHandler,
+  stopHandler?: QuickStopHandler,
+) {
   spinAnimationHandler = handler;
+  quickStopHandler = stopHandler ?? null;
   return () => {
     if (spinAnimationHandler === handler) {
       spinAnimationHandler = null;
+    }
+    if (quickStopHandler === stopHandler) {
+      quickStopHandler = null;
+    }
+  };
+}
+
+export function registerQuickStopAnimation(handler: QuickStopHandler) {
+  quickStopHandler = handler;
+  return () => {
+    if (quickStopHandler === handler) {
+      quickStopHandler = null;
     }
   };
 }
@@ -223,6 +241,13 @@ export async function spin(fromUser = false): Promise<boolean> {
   return true;
 }
 
+export function quickStop() {
+  if (!state.isSpinning) return;
+  if (quickStopHandler) {
+    quickStopHandler();
+  }
+}
+
 /** Dismisses the intro modal and enters the active free spins mode waiting for player spins. */
 export function startFreeSpins() {
   if (state.featureMessage?.type !== "intro") return;
@@ -267,6 +292,7 @@ export function useSlotGame() {
     nextBet,
     startFreeSpins,
     closeOutro,
+    quickStop,
     availableBets,
     gameSession: customGameSession,
     gameSessionSerializer: customGameSessionSerializer,

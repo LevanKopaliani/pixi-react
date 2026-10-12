@@ -116,6 +116,7 @@ export default function Reels({ reels: propReels }: ReelsProps) {
 
   const containerRef = useRef<PixiContainer | null>(null);
   const reelRefs = useRef<(PixiContainer | null)[]>([]);
+  const quickStopRef = useRef<(() => void) | null>(null);
 
   const [texturesLoaded, setTexturesLoaded] = useState(
     symbolTextureCache.size > 0,
@@ -138,10 +139,21 @@ export default function Reels({ reels: propReels }: ReelsProps) {
   // GSAP reel spinning animation inspired by pixi-slot
   const spinReelsWithGsap = (outcomeSymbols: string[][]) => {
     return new Promise<void>((resolve) => {
+      let isResolved = false;
       const spinSpeed = 35;
       const stopDelay = 0.22; // Stagger delay between reels stopping
-      let finishedReelsCount = 0;
-      const gsapTweens: gsap.core.Tween[] = [];
+      const scheduledTimers: gsap.core.Tween[] = [];
+      const continuousTweens: (gsap.core.Tween | null)[] = new Array(
+        REEL_CONFIG.NUM_REELS,
+      ).fill(null);
+      const stoppedReels = new Set<number>();
+
+      const finish = () => {
+        if (isResolved) return;
+        isResolved = true;
+        quickStopRef.current = null;
+        resolve();
+      };
 
       const step = REEL_CONFIG.SYMBOL_HEIGHT + REEL_CONFIG.ROW_GAP;
       const TOTAL_SLOTS = REEL_CONFIG.NUM_ROWS + REEL_CONFIG.BUFFER_ROWS;
@@ -152,13 +164,61 @@ export default function Reels({ reels: propReels }: ReelsProps) {
         (_, i) => i * step,
       );
 
-      console.log("outcomeSymbols", originalPositions);
+      const stopReel = (reelIndex: number, isQuick = false) => {
+        if (stoppedReels.has(reelIndex)) return;
+        stoppedReels.add(reelIndex);
+
+        continuousTweens[reelIndex]?.kill();
+
+        const reel = reelRefs.current[reelIndex];
+        if (!reel) {
+          if (stoppedReels.size === REEL_CONFIG.NUM_REELS) finish();
+          return;
+        }
+
+        const sprites = reel.children as PixiSprite[];
+        if (!sprites || sprites.length === 0) {
+          if (stoppedReels.size === REEL_CONFIG.NUM_REELS) finish();
+          return;
+        }
+
+        // Set outcome textures for the visible 3 rows
+        const targetStrip = outcomeSymbols[reelIndex];
+        if (targetStrip) {
+          targetStrip.forEach((symKey, rowIdx) => {
+            const sprite = sprites[rowIdx];
+            if (sprite) {
+              const tex = getSymbolTexture(symKey);
+              if (tex) sprite.texture = tex;
+            }
+          });
+        }
+
+        const duration = isQuick ? 0.12 : 0.35;
+        const ease = isQuick ? "power2.out" : "back.out(1.3)";
+
+        // Animate symbols back to exact resting positions
+        sprites.forEach((symbol, symbolIndex) => {
+          gsap.killTweensOf(symbol);
+          gsap.to(symbol, {
+            y: originalPositions[symbolIndex],
+            duration,
+            ease,
+            onComplete: () => {
+              if (symbolIndex === 0) {
+                if (stoppedReels.size === REEL_CONFIG.NUM_REELS) {
+                  finish();
+                }
+              }
+            },
+          });
+        });
+      };
 
       const spinReel = (reel: PixiContainer, reelIndex: number) => {
         const sprites = reel.children as PixiSprite[];
         if (!sprites || sprites.length === 0) {
-          finishedReelsCount++;
-          if (finishedReelsCount === REEL_CONFIG.NUM_REELS) resolve();
+          stopReel(reelIndex, false);
           return;
         }
 
@@ -183,56 +243,42 @@ export default function Reels({ reels: propReels }: ReelsProps) {
           },
         });
 
-        gsapTweens.push(tween);
+        continuousTweens[reelIndex] = tween;
 
         // Staggered stop: 0.9s base + reelIndex * stopDelay
-        gsap.delayedCall(0.9 + reelIndex * stopDelay, () => {
-          tween.kill();
-
-          // Set outcome textures for the visible 3 rows
-          const targetStrip = outcomeSymbols[reelIndex];
-          if (targetStrip) {
-            targetStrip.forEach((symKey, rowIdx) => {
-              const sprite = sprites[rowIdx];
-              if (sprite) {
-                const tex = getSymbolTexture(symKey);
-                if (tex) sprite.texture = tex;
-              }
-            });
-          }
-
-          // Animate symbols back to exact resting positions with a satisfying landing bounce
-          sprites.forEach((symbol, symbolIndex) => {
-            gsap.to(symbol, {
-              y: originalPositions[symbolIndex],
-              duration: 0.35,
-              ease: "back.out(1.3)",
-              onComplete: () => {
-                if (symbolIndex === 0) {
-                  finishedReelsCount++;
-                  if (finishedReelsCount === REEL_CONFIG.NUM_REELS) {
-                    resolve();
-                  }
-                }
-              },
-            });
-          });
+        const delayedStop = gsap.delayedCall(0.9 + reelIndex * stopDelay, () => {
+          stopReel(reelIndex, false);
         });
+        scheduledTimers.push(delayedStop);
       };
 
       // Launch reels with a slight start stagger
       reelRefs.current.forEach((reel, reelIndex) => {
         if (reel) {
-          gsap.delayedCall(reelIndex * 0.05, () => {
+          const launchCall = gsap.delayedCall(reelIndex * 0.05, () => {
             spinReel(reel, reelIndex);
           });
+          scheduledTimers.push(launchCall);
         }
       });
+
+      // Quick stop callback: cancels all scheduled timers and halts all reels immediately
+      quickStopRef.current = () => {
+        if (isResolved) return;
+        scheduledTimers.forEach((t) => t.kill());
+        scheduledTimers.length = 0;
+
+        for (let r = 0; r < REEL_CONFIG.NUM_REELS; r++) {
+          stopReel(r, true);
+        }
+      };
     });
   };
 
   useEffect(() => {
-    return registerSpinAnimation(spinReelsWithGsap);
+    return registerSpinAnimation(spinReelsWithGsap, () => {
+      quickStopRef.current?.();
+    });
   }, [texturesLoaded]);
 
   if (!texturesLoaded) {

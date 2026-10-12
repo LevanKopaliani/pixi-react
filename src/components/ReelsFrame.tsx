@@ -65,12 +65,12 @@ const ReelsFrame = (props: React.PropsWithChildren) => {
 
   const centerX = screenSize.width / 2;
   const centerY = screenSize.height / 2 - screenSize.height / 15;
+  console.log(centerX, centerY);
   const scale = Math.min(
     1,
     (screenSize.width * 0.96) / FRAME_CONFIG.WIDTH,
     (screenSize.height * 0.88) / FRAME_CONFIG.HEIGHT,
   );
-
   const maskX = -FRAME_CONFIG.INNER_WIDTH / 2;
   const maskY = FRAME_CONFIG.INNER_OFFSET_Y - FRAME_CONFIG.INNER_HEIGHT / 2;
 
